@@ -1,0 +1,12 @@
+{
+  "appName": {
+    "message": "Captcha Plugin: ReCaptcha Solver by Raptor"
+  },
+  "appDescription": {
+    "message": "❗❗如果安装后无效 – 请重启浏览器❗❗\n该插件通过选择并点击图片自动解决 reCAPTCHA — 整个过程由插件内置的神经网络处理。\n\n功能：\n - 支持 reCAPTCHA V2 / V2 隐形 / Enterprise\n - 免费\n - 无需 API 密钥，也无需付款\n - 扩展内的神经网络在 CPU 上运行\n - 可离线工作（不过 reCAPTCHA 要怎么加载？）\n - 无需注册，安装后即可使用\n\n使用说明：\n - 启动时可能会暂停 5–15 秒以加载 AI 模型\n - 仅识别英文，因此会自动将 reCAPTCHA 切换为英文\n - 在设置中，你可以启用/禁用插件\n - 你可以设置点击图片前的延迟\n - 插件会向 captcharaptor 发送报告\n - 报告中包含其遇到的图片\n\n目前的缺点：\n - 有时会出错\n - 解决验证码后不会自动提交表单\n\n这是插件的第一个公开版本。前往 captchaplugin.com 注册以获得更强大或更快速的版本。但此版本无需注册即可使用。"
+  },
+  "actionTitle": {
+    "message": "打开 CaptchaPlugin"
+  }
+}
+

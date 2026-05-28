@@ -1,0 +1,82 @@
+{
+  "name": "Free AI ReCaptcha Solver by Raptor (Captcha Plugin)",
+  "version": "0.2.13",
+  "description": "Automatically solves ReCaptcha images using a built-in neural network. Completely free. No registration or key purchase required.",
+  "default_locale": "en",
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "models/type.onnx",
+        "models/grid.onnx",
+        "models/grid.meta.json",
+        "lib/sql-wasm.wasm",
+        "lib/sql-wasm.js",
+        "lib/sql-wasm-wrapper.js",
+        "lib/sql-wasm.mjs",
+        "db/captcha.sqlite",
+        "background_sqlite.js",
+        "captcha/phash-browser.js",
+        "libs/onnxruntime-web/**",
+        "captcha/libs/onnxruntime-web/**",
+        "captcha/recaptcha_ai.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.google.com/recaptcha/*",
+        "*://*.recaptcha.net/recaptcha/*"
+      ],
+      "js": ["eventhook/loader.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "*://*.google.com/recaptcha/*",
+        "*://*.recaptcha.net/recaptcha/*"
+      ],
+      "js": [
+        "eventhook.js",
+        "captcha/recaptcha.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
+  "icons": {
+    "16": "icon/16.png",
+    "32": "icon/32.png",
+    "48": "icon/48.png",
+    "128": "icon/128.png"
+  },
+  "manifest_version": 3,
+  "permissions": [
+    "alarms",
+    "scripting",
+    "declarativeNetRequest",
+    "idle",
+    "storage"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
+  },
+  "action": {
+    "default_title": "Captcha Plugin: ReCaptcha Solver by Raptor",
+    "default_icon": "icon/16.png",
+    "default_popup": "popup.html"
+  },
+"host_permissions": [
+  "*://*.google.com/recaptcha/*"
+],
+  "minimum_chrome_version": "111",
+  "version_name": "v0.2.13"
+}

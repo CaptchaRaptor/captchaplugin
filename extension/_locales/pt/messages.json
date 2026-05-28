@@ -1,0 +1,12 @@
+{
+  "appName": {
+    "message": "Captcha Plugin: ReCaptcha Solver by Raptor"
+  },
+  "appDescription": {
+    "message": "❗❗SE NÃO FUNCIONAR APÓS A INSTALAÇÃO – REINICIE SEU NAVEGADOR❗❗\nO plugin resolve automaticamente o reCAPTCHA selecionando e clicando nas imagens — toda a solução é processada por uma rede neural integrada diretamente dentro do plugin.\n\nRecursos:\n - Resolve reCAPTCHA V2 / V2 Invisible / Enterprise\n - Gratuito\n - Não requer chave de API, sem pagamentos necessários\n - A rede neural dentro da extensão roda na CPU\n - Pode funcionar offline (mas como você carregará o reCAPTCHA?)\n - Não exige registro, funciona assim que instalado\n\nDetalhes de uso:\n - Na inicialização, pode pausar por 5–15 segundos enquanto carrega modelos de IA\n - Entende apenas inglês, então muda automaticamente o reCAPTCHA para inglês\n - Nas configurações, você pode ativar/desativar o plugin\n - Você pode definir um atraso antes de clicar em uma imagem\n - O plugin envia relatórios para captcharaptor\n - Os relatórios contêm as imagens que ele encontrou\n\nDesvantagens atuais:\n - Às vezes comete erros\n - Não envia automaticamente o formulário após resolver o captcha\n\nEsta é a primeira versão pública do plugin. Cadastre-se em captchaplugin.com para obter versões mais poderosas ou rápidas. Mas o registro não é necessário para que esta versão funcione."
+  },
+  "actionTitle": {
+    "message": "Abrir CaptchaPlugin"
+  }
+}
+

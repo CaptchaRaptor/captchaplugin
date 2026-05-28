@@ -1,0 +1,10 @@
+# Claude Code local settings
+**/.claude/
+
+# Obfuscation build artifacts (generated files, not source)
+**/.tmp_obf/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+CLAUDE.md
