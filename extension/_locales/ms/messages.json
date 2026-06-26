@@ -1,0 +1,12 @@
+{
+  "appName": {
+    "message": "Captcha Plugin: ReCaptcha Solver by Raptor"
+  },
+  "appDescription": {
+    "message": "❗❗JIKA IA TIDAK BERFUNGSI SELEPAS PEMASANGAN – MULAKAN SEMULA PELAYAR ANDA❗❗\nPlugin ini secara automatik menyelesaikan reCAPTCHA dengan memilih dan mengklik gambar — keseluruhan penyelesaian diproses oleh rangkaian neural yang tertanam terus dalam plugin.\n\nCiri-ciri:\n - Menyelesaikan reCAPTCHA V2 / V2 Invisible / Enterprise\n - Percuma\n - Tidak memerlukan kunci API atau bayaran\n - Rangkaian neural dalam sambungan berjalan pada CPU\n - Boleh berfungsi secara luar talian (tetapi bagaimana anda akan memuat reCAPTCHA?)\n - Tidak memerlukan pendaftaran, terus berfungsi selepas pemasangan\n\nButiran penggunaan:\n - Semasa permulaan, mungkin berehat selama 5–15 saat semasa memuat model AI\n - Hanya memahami Bahasa Inggeris, jadi secara automatik menukar reCAPTCHA ke bahasa Inggeris\n - Dalam tetapan, anda boleh membolehkan / melumpuhkan plugin\n - Anda boleh menetapkan kelewatan sebelum mengklik gambar\n - Plugin menghantar laporan ke captcharaptor\n - Laporan mengandungi gambar yang ditemuinya\n\nKekurangan semasa ini:\n - Kadang-kadang melakukan kesilapan\n - Tidak menyerahkan borang secara automatik selepas menyelesaikan captcha\n\nIni adalah versi awam pertama plugin. Daftar di captchaplugin.com untuk mendapatkan versi yang lebih kuat atau lebih pantas. Tetapi pendaftaran tidak diperlukan untuk versi ini berfungsi."
+  },
+  "actionTitle": {
+    "message": "Buka CaptchaPlugin"
+  }
+}
+

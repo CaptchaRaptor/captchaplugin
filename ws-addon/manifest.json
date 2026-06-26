@@ -1,0 +1,87 @@
+{
+  "name": "Free AI ReCaptcha Solver by Raptor",
+  "version": "1.1.15.10",
+  "description": "Automatically solves ReCaptcha images using a built-in neural network. Completely free. No registration or key purchase required.",
+  "default_locale": "en",
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "models/type.onnx",
+        "models/grid.onnx",
+        "models/grid.meta.json",
+        "lib/sql-wasm.wasm",
+        "lib/sql-wasm.js",
+        "lib/sql-wasm-wrapper.js",
+        "lib/sql-wasm.mjs",
+        "db/captcha.sqlite",
+        "background_sqlite.js",
+        "captcha/phash-browser.js",
+        "libs/onnxruntime-web/**",
+        "captcha/libs/onnxruntime-web/**",
+        "captcha/recaptcha_ai.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.google.com/recaptcha/*",
+        "*://*.recaptcha.net/recaptcha/*"
+      ],
+      "js": ["eventhook/loader.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "*://*.google.com/recaptcha/*",
+        "*://*.recaptcha.net/recaptcha/*"
+      ],
+      "js": [
+        "eventhook.js",
+        "captcha/recaptcha.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
+  "icons": {
+    "16": "icon/16.png",
+    "32": "icon/32.png",
+    "48": "icon/48.png",
+    "128": "icon/128.png"
+  },
+  "manifest_version": 3,
+  "permissions": [
+    "alarms",
+    "scripting",
+    "declarativeNetRequest",
+    "idle",
+    "storage",
+    "tabs",
+    "debugger",
+    "offscreen"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "minimum_chrome_version": "116",
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
+  },
+  "action": {
+    "default_title": "Captcha Plugin: ReCaptcha Solver by Raptor",
+    "default_icon": "icon/16.png",
+    "default_popup": "popup.html"
+  },
+"host_permissions": [
+  "*://*.google.com/recaptcha/*",
+  "*://*.recaptcha.net/recaptcha/*",
+  "<all_urls>"
+],
+  "version_name": "v1.1.15.10"
+}

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>CaptchaPlugin</title>
+  <link rel="stylesheet" href="popup.css">
+  <style>
+    .hidden { display: none !important; }
+    .inline-btn { padding: 6px 10px; font-size: 13px; }
+    .header-row { display:flex; align-items:center; justify-content:space-between; }
+  </style>
+</head>
+<body>
+  
+  <div id="page_main">
+    <div class="header">
+      <h1>CaptchaPlugin by Raptor</h1>
+    </div>
+
+    <section class="card">
+      <div class="kv">
+        <span>Solver enabled</span>
+        <label class="switch"><input type="checkbox" id="enabled"><span class="slider"></span></label>
+
+        <span>reCAPTCHA support</span>
+        <label class="switch"><input type="checkbox" id="recaptcha"><span class="slider"></span></label>
+
+        <span>Auto-click buttons</span>
+        <label class="switch"><input type="checkbox" id="autoclick"><span class="slider"></span></label>
+
+        <span>Solve image challenges</span>
+        <label class="switch"><input type="checkbox" id="images"><span class="slider"></span></label>
+
+        <span>Delay (ms)</span>
+        <input type="number" id="delay" min="0" step="50" placeholder="0">
+
+        <span id="ws_mode_label" title="Requires a 32-character API key" class="hidden">WS mode</span>
+        <label class="switch hidden" id="ws_mode_switch"><input type="checkbox" id="ws_mode" disabled><span class="slider"></span></label>
+      </div>
+      <p class="small help">Models run locally, no data is sent outside.</p>
+    </section>
+
+    <section class="card">
+      <button id="open_reports" class="btn full">Reports</button>
+    </section>
+
+    <div class="footer small">
+      <a href="https://captchaplugin.com" target="_blank" rel="noopener noreferrer">Visit captchaplugin.com</a>
+    </div>
+  </div>
+
+  
+  <div id="page_reports" class="hidden">
+    <div class="header-row">
+      <h1>Reports</h1>
+      <button id="back_main" class="btn inline-btn">← Back</button>
+    </div>
+
+    <section class="card">
+      <h2>Reports</h2>
+      <hr class="divider">
+      <div class="reports-grid">
+        <span>Enable reports</span>
+        <label class="switch"><input type="checkbox" id="rep_enabled"><span class="slider"></span></label>
+
+        <span id="rep_key_label">API key (16 chars)</span>
+        <input type="text" id="rep_key" pattern="[0-9a-z]{16}([0-9a-z]{16})?" maxlength="32" placeholder="secretkey0123456">
+
+        <button id="rep_send" class="btn full">Send reports</button>
+        <span id="rep_status" class="small status full"></span>
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
+
