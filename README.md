@@ -33,8 +33,12 @@ Click the extension icon to open the popup. Available settings:
 | Enabled | On | Master on/off switch |
 | Auto-open | On | Automatically click the reCAPTCHA checkbox |
 | Auto-solve | On | Automatically solve the image challenge |
-| Solve delay | On, 2 s | Wait before submitting answers (reduces detection risk) |
+| Between tile clicks | 300 ms | Pause between clicking individual tiles (3×3 only) |
+| Dynamic reveal → click | 850 ms | Pause from a new dynamic tile image appearing to clicking it (counts recognition time already spent) |
+| Last click → verify | 850 ms | Pause between the final tile click and pressing Verify |
 | Disabled sites | — | Hostnames where the extension is inactive |
+
+A random 0–300 ms jitter is added to each timeout above every time it fires. Tiles in a 3×3 challenge are clicked in a randomized order.
 
 ## How It Works
 

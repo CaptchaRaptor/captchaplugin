@@ -9,6 +9,7 @@
     .hidden { display: none !important; }
     .inline-btn { padding: 6px 10px; font-size: 13px; }
     .header-row { display:flex; align-items:center; justify-content:space-between; }
+    .btn.full + .btn.full { margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -32,9 +33,6 @@
         <span>Solve image challenges</span>
         <label class="switch"><input type="checkbox" id="images"><span class="slider"></span></label>
 
-        <span>Delay (ms)</span>
-        <input type="number" id="delay" min="0" step="50" placeholder="0">
-
         <span id="ws_mode_label" title="Requires a 32-character API key" class="hidden">WS mode</span>
         <label class="switch hidden" id="ws_mode_switch"><input type="checkbox" id="ws_mode" disabled><span class="slider"></span></label>
       </div>
@@ -42,6 +40,7 @@
     </section>
 
     <section class="card">
+      <button id="open_timeouts" class="btn full">Timeouts</button>
       <button id="open_reports" class="btn full">Reports</button>
     </section>
 
@@ -70,6 +69,30 @@
         <button id="rep_send" class="btn full">Send reports</button>
         <span id="rep_status" class="small status full"></span>
       </div>
+    </section>
+  </div>
+
+
+  <div id="page_timeouts" class="hidden">
+    <div class="header-row">
+      <h1>Timeouts</h1>
+      <button id="back_main_t" class="btn inline-btn">← Back</button>
+    </div>
+
+    <section class="card">
+      <h2>Timeouts (ms)</h2>
+      <hr class="divider">
+      <div class="kv">
+        <span>Between tile clicks</span>
+        <span class="unit"><input type="number" id="click_delay" min="0" step="10" placeholder="300"><small>ms</small></span>
+
+        <span>Dynamic reveal → click</span>
+        <span class="unit"><input type="number" id="reveal_delay" min="0" step="10" placeholder="850"><small>ms</small></span>
+
+        <span>Last click → verify</span>
+        <span class="unit"><input type="number" id="verify_delay" min="0" step="10" placeholder="850"><small>ms</small></span>
+      </div>
+      <p class="small help">A random 0–300 ms is added to each timeout. Dynamic reveal counts recognition time already spent.</p>
     </section>
   </div>
 

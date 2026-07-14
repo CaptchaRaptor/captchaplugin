@@ -91,7 +91,7 @@ async function phash(src) {
 const ALIAS = { fire:'hydrants', firehydrant:'hydrants', 'fire_hydrant':'hydrants',
   bicycle:'bicycles', bike:'bicycles', boat:'boats', bridge:'bridges',
   bus:'buses', car:'cars', chimney:'chimney', chimneys:'chimney',
-  crosswalk:'crosswalks', zebra:'crosswalks', hydrant:'hydrants',
+  crosswalk:'crosswalks', zebra:'crosswalks', pedestrian:'crosswalks', hydrant:'hydrants',
   motorcycle:'motorcycles', mountain:'mountains', palm:'palm',
   parkingmeter:'parkingmeter',  parking:'parkingmeter', stairs:'stairs', stair:'stairs',
   taxi:'taxi', taxis:'taxi', tractor:'tractors', tractors:'tractors',
@@ -708,9 +708,13 @@ async function ke() {
  				}
  			}
 
-    const i   = C();         
+    const i   = C();
     const startTs = Date.now();
-    let   c   = [...n];      
+    const clickDelay  = i.recaptcha_delay_between_clicks ?? 300;
+    const revealDelay = i.recaptcha_delay_dynamic_reveal ?? 850;
+    const verifyDelay = i.recaptcha_delay_before_verify ?? 850;
+    const jitter = () => Math.random() * 300;   // 0..300ms added to each timeout
+    let   c   = [...n];
     let   o   = [...o0];     
 
     
@@ -794,8 +798,8 @@ async function ke() {
     
     
     
-    if (i.recaptcha_solve_delay) {
-      const wait = i.recaptcha_solve_delay_time - Date.now() + startTs;
+    if (a && g.data.some(Boolean)) {
+      const wait = revealDelay + jitter() - (Date.now() - startTs);
       if (wait > 0) await l(wait);
     }
 
@@ -850,18 +854,33 @@ async function ke() {
     
     
     const P = t === 2 ? 4 : 3;
-    let clickedIdx = [];              
-    c.forEach((cell, idx) => {
-      const already = cell.classList.contains('rc-imageselect-tileselected');
-      const h = n.indexOf(cell);            
-      if (g.data[idx] !== already) {
-        clickedIdx.push(idx);
-        _({
-          action: 'click',
-          selector: `tr:nth-child(${Math.floor(h / P) + 1}) td:nth-child(${h % P + 1})`
-        });
+    let clickedIdx = [];
+
+    // collect the tile indices that actually need a click
+    const toClick = [];
+    for (let idx = 0; idx < c.length; idx++) {
+      const already = c[idx].classList.contains('rc-imageselect-tileselected');
+      if (g.data[idx] !== already) toClick.push(idx);
+    }
+
+    // 3x3 challenges: click tiles in random order (Fisher–Yates)
+    if (t === 0) {
+      for (let i = toClick.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [toClick[i], toClick[j]] = [toClick[j], toClick[i]];
       }
-    });
+    }
+
+    for (let k = 0; k < toClick.length; k++) {
+      const idx = toClick[k];
+      const h = n.indexOf(c[idx]);
+      if (k > 0 && t !== 2) await l(clickDelay + jitter());  // no inter-click delay on 4x4
+      clickedIdx.push(idx);
+      _({
+        action: 'click',
+        selector: `tr:nth-child(${Math.floor(h / P) + 1}) td:nth-child(${h % P + 1})`
+      });
+    }
 
 
 
@@ -890,7 +909,7 @@ async function ke() {
 
     
     if ((!a || !g.data.some(Boolean)) && !forcedDyn33Click) {
-      await l(200);
+      await l(verifyDelay + jitter());
       _({ action: 'click', selector: '#recaptcha-verify-button' });
       if (isFinalVerifyButton()) {
         incStep(); 

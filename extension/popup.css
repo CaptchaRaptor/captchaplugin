@@ -62,7 +62,7 @@ input[type="number"], input[type="text"] {
 
 .kv {
   display: grid;
-  grid-template-columns: 1fr 48px; 
+  grid-template-columns: 1fr auto;
   align-items: center;
   gap: 8px 10px;
   width: 100%;
@@ -71,17 +71,26 @@ input[type="number"], input[type="text"] {
 
 .kv + .kv {
   display: grid;
-  grid-template-columns: 1fr 48px; 
+  grid-template-columns: 1fr auto;
   align-items: center;
   gap: 8px 10px;
   width: 100%;
 }
 .kv > .switch { justify-self: end; }
 
+.kv .unit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: end;
+}
+.kv .unit small {
+  color: var(--muted);
+  font-size: 12px;
+}
 .kv input[type="number"] {
-  width: 100px;          
-  max-width: 100%;
-  justify-self: end;     
+  width: 72px;
+  justify-self: end;
 }
 
 .small { font-size: 12px; color: var(--muted); }

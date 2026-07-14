@@ -59,15 +59,16 @@ importScripts(chrome.runtime.getURL('background_sqlite.js'));
         return p.has(e.id) ? [...p.get(e.id)] : []
     }
     var y = {
-        version: 18,
+        version: 20,
         key: "",
         keys: [],
         enabled: !0,
         disabled_hosts: [],
         recaptcha_auto_open: !0,
         recaptcha_auto_solve: !0,
-        recaptcha_solve_delay_time: 2e3,
-        recaptcha_solve_delay: !0,
+        recaptcha_delay_between_clicks: 300,
+        recaptcha_delay_dynamic_reveal: 850,
+        recaptcha_delay_before_verify: 850,
     };
     var v = i.action,
         R = !0;

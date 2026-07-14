@@ -200,7 +200,7 @@ const ALIAS = {
   bus:'buses',
   car:'cars',
   chimney:'chimney', chimneys:'chimney',
-  crosswalk:'crosswalks', zebra:'crosswalks',
+  crosswalk:'crosswalks', zebra:'crosswalks', pedestrian:'crosswalks',
 
   motorcycle:'motorcycles',
   mountain:'mountains',
