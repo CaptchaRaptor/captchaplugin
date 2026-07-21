@@ -269,10 +269,70 @@ importScripts(chrome.runtime.getURL('background_sqlite.js'));
 
 (function(){
   const CAPLOG_DB_NAME = 'caplog';
-  const CAPLOG_DB_VERSION = 4; 
+  const CAPLOG_DB_VERSION = 4;
   const CAPIMG_MAX_ROWS = 100000;
   let __caplogDBPromise;
   const __manifestVersion = chrome.runtime.getManifest().version;
+
+  // ---- token-mark state (fixes tokenOk never reaching 100%) ----
+  // tabId -> { id, ts } : which solvingid is currently active in a tab. The anchor
+  // frame's markSolved carries no solvingid, so we resolve it here by sender.tab.id.
+  const activeSolveByTab = new Map();
+  // solvingid -> ts : solves for which a token was received. In-memory so row inserts
+  // can be stamped synchronously; persisted so an MV3 worker restart keeps the marks.
+  const solvedSet = new Map();
+  const ACTIVE_SOLVE_TTL_MS = 120000;      // ignore stale active solves (missed nav event)
+  const SOLVED_MAX = 5000;                 // cap solvedSet size
+  const SOLVED_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+  const SOLVED_STORAGE_KEY = 'caplog_solved';
+
+  const __solvedReady = (async () => {
+    try {
+      const data = await chrome.storage.local.get(SOLVED_STORAGE_KEY);
+      const arr = data && data[SOLVED_STORAGE_KEY];
+      if (Array.isArray(arr)) {
+        const now = Date.now();
+        for (const entry of arr) {
+          if (!Array.isArray(entry)) continue;
+          const [id, ts] = entry;
+          if (id && typeof ts === 'number' && (now - ts) < SOLVED_MAX_AGE_MS) solvedSet.set(id, ts);
+        }
+      }
+    } catch (e) {}
+  })();
+
+  function persistSolved(){
+    try { chrome.storage.local.set({ [SOLVED_STORAGE_KEY]: [...solvedSet.entries()] }); } catch (e) {}
+  }
+
+  function pruneSolved(){
+    const now = Date.now();
+    for (const [id, ts] of solvedSet) {
+      if (now - ts >= SOLVED_MAX_AGE_MS) solvedSet.delete(id);
+    }
+    if (solvedSet.size > SOLVED_MAX) {
+      const sorted = [...solvedSet.entries()].sort((a, b) => a[1] - b[1]);
+      const toDrop = solvedSet.size - SOLVED_MAX;
+      for (let i = 0; i < toDrop; i++) solvedSet.delete(sorted[i][0]);
+    }
+  }
+
+  function stampIfSolved(row){
+    if (row && row.solvingid && !row.tokenOk && solvedSet.has(row.solvingid)) {
+      row.tokenOk = true;
+      row.tokenTs = solvedSet.get(row.solvingid);
+    }
+    return row;
+  }
+
+  // Drop a tab's active solve on navigation / close so a later solve (or a
+  // no-challenge pass) can't be misattributed to an abandoned earlier one.
+  chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+    if (changeInfo && changeInfo.status === 'loading') activeSolveByTab.delete(tabId);
+  });
+  chrome.tabs.onRemoved.addListener((tabId) => {
+    activeSolveByTab.delete(tabId);
+  });
 
 
 
@@ -324,12 +384,16 @@ importScripts(chrome.runtime.getURL('background_sqlite.js'));
 
   async function caplogBulkPut(store, rows){
     const db = await openCaplogDB();
+    await __solvedReady;   // ensure solvedSet is hydrated before stamping inserts
     return new Promise((resolve, reject) => {
       const tx = db.transaction(store, 'readwrite');
       tx.oncomplete = () => resolve(true);
       tx.onerror = () => reject(tx.error || new Error('caplog tx error'));
       const os = tx.objectStore(store);
-      for (const row of (rows || []).map(withMeta)) {
+      for (const raw of (rows || [])) {
+        // If the token already arrived for this solvingid, stamp the row at insert
+        // time — this catches the last step that lands after markSolved fired.
+        const row = stampIfSolved(withMeta(raw));
         try { os.add(row); } catch(e){  }
       }
     });
@@ -351,9 +415,16 @@ importScripts(chrome.runtime.getURL('background_sqlite.js'));
   }
 
 
-  async function caplogMarkSolved({ solvingid, ts }) {
-    if (!solvingid) return false;
+  function caplogBeginSolve({ id }, sender) {
+    const tabId = sender && sender.tab ? sender.tab.id : undefined;
+    if (!id || tabId == null) return false;
+    activeSolveByTab.set(tabId, { id, ts: Date.now() });
+    return true;
+  }
 
+  // Stamp already-written rows of a solvingid via the 'solvingid' index (not a full
+  // scan of both stores). capimg has no solvingid/tokenOk and is deliberately untouched.
+  async function stampRowsBySolvingid(solvingid, ts) {
     const db = await openCaplogDB();
     return new Promise((resolve, reject) => {
       try {
@@ -361,30 +432,65 @@ importScripts(chrome.runtime.getURL('background_sqlite.js'));
         tx.oncomplete = () => resolve(true);
         tx.onerror    = () => reject(tx.error || new Error('caplog markSolved tx error'));
 
-        const updateStore = (storeName) => {
-          const os  = tx.objectStore(storeName);
-          const req = os.openCursor();
-
+        const stampStore = (storeName) => {
+          const os = tx.objectStore(storeName);
+          let idx;
+          try { idx = os.index('solvingid'); } catch (e) { return; }
+          const req = idx.openCursor(IDBKeyRange.only(solvingid));
           req.onsuccess = (ev) => {
             const cursor = ev.target.result;
             if (!cursor) return;
-
             const val = cursor.value || {};
-            if (val.solvingid === solvingid) {
+            if (!val.tokenOk) {
               val.tokenOk = true;
-              val.tokenTs = ts || Date.now();
+              val.tokenTs = ts;
               cursor.update(val);
             }
             cursor.continue();
           };
         };
 
-        updateStore('cap33plagin');
-        updateStore('cap44plagin');
+        stampStore('cap33plagin');
+        stampStore('cap44plagin');
       } catch (err) {
         reject(err);
       }
     });
+  }
+
+  async function caplogMarkSolved(payload, sender) {
+    payload = payload || {};
+    const ts = payload.ts || Date.now();
+    const tabId = sender && sender.tab ? sender.tab.id : undefined;
+
+    // Resolve the solvingid: explicit payload id wins (future use, no TTL);
+    // otherwise take the tab's active solve, guarded by TTL.
+    let id = payload.solvingid;
+    if (!id) {
+      if (tabId == null) return false;
+      const active = activeSolveByTab.get(tabId);
+      if (!active) return false;
+      if (Date.now() - active.ts > ACTIVE_SOLVE_TTL_MS) {
+        activeSolveByTab.delete(tabId);
+        return false;
+      }
+      id = active.id;
+    }
+    if (!id) return false;
+
+    await __solvedReady;
+    solvedSet.set(id, ts);   // so rows inserted after this get stamped at insert time
+    pruneSolved();
+    persistSolved();
+
+    try {
+      await stampRowsBySolvingid(id, ts);   // stamp rows already written for this solve
+    } finally {
+      // Clear the tab's active solve so a later no-challenge pass in the same tab
+      // can't re-mark this solve.
+      if (tabId != null) activeSolveByTab.delete(tabId);
+    }
+    return true;
   }
 
   
@@ -472,7 +578,8 @@ importScripts(chrome.runtime.getURL('background_sqlite.js'));
   ue['caplog::put44']   = ([row])       => caplogPut('cap44plagin', row);
   ue['caplog::bulk44']  = ([rows])      => caplogBulkPut('cap44plagin', rows);
   ue['caplog::getAll']  = ([store])     => caplogGetAll(store);
-  ue['caplog::markSolved'] = ([payload]) => caplogMarkSolved(payload);
+  ue['caplog::beginSolve'] = ([payload], sender) => caplogBeginSolve(payload || {}, sender);
+  ue['caplog::markSolved'] = ([payload], sender) => caplogMarkSolved(payload, sender);
   ue['caplog::clear']   = ([store])     => (async () => {
     const db = await openCaplogDB();
     return new Promise((resolve, reject) => {

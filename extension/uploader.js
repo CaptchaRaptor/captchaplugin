@@ -290,68 +290,76 @@
     await setState({ uploading: true });
 
     try {
-      const st = await statusCheck(sendKey);
-      if (st && st.accepting === false) {
-        await setState({ last_error_ts: Date.now(), last_error_reason: 'Server is not accepting uploads (accepting=false)' });
-        return { skipped: true, reason: 'server-not-accepting' };
-      }
-    } catch {}
-
-    const db = await openDB();
-    let anySent = false;
-    let totalStats = [];
-
-    while (true) {
-      const batch = await buildNextBatch(db, cfg);
-      if (!batch || !batch.parts.length) break;
-
-      const res = await sendBatch(batch.form, sendKey, cfg.client_id || '');
-      const partMetrics = batch.parts.map(p => ({ store: p.store, filename: p.filename, lines: p.lines, bytes: p.bytes }));
-
-      if (res.ok && res.status === 200 && res.json && res.json.ok === true) {
-        
-        for (const p of batch.parts) {
-          try { await deleteKeys(db, p.store, p.keys); } catch {}
+      try {
+        const st = await statusCheck(sendKey);
+        if (st && st.accepting === false) {
+          await setState({ last_error_ts: Date.now(), last_error_reason: 'Server is not accepting uploads (accepting=false)' });
+          return { skipped: true, reason: 'server-not-accepting' };
         }
-        anySent = true;
-        totalStats = totalStats.concat(partMetrics);
-        await setReporting({ _backoff_minutes: 0, _next_try_ts: 0 });
-      } else {
-        const reason =
-          res.status === 403 ? '403: invalid key' :
-          res.status === 400 ? '400: server did not receive data (check multipart)' :
-          res.status === 413 ? '413: request too large' :
-          res.status >= 500 ? `5xx: server error (${res.status})` :
-          res.text || 'Unknown error';
-        await setState({ last_error_ts: Date.now(), last_error_reason: `Send error: ${reason}` });
+      } catch {}
 
+      const db = await openDB();
+      let anySent = false;
+      let totalStats = [];
 
-        if (res.status === 413) {
-          const curPart = cfg.part_max_bytes || (5 * 1024 * 1024);
-          const nextPart = Math.max(256 * 1024, Math.floor(curPart / 2));
-          const curMulti = cfg.multipart_max_bytes || curPart;
-          const nextMulti = Math.max(nextPart, Math.floor(curMulti / 2));
-          await setReporting({ part_max_bytes: nextPart, multipart_max_bytes: nextMulti, max_parts_per_batch: 1, _backoff_minutes: 1, _next_try_ts: Date.now() + 60_000 });
-        } else if (res.status === 403) {
-          const backoff = cfg.backoff_max_minutes;
-          await setReporting({ _backoff_minutes: backoff, _next_try_ts: Date.now() + backoff * 60_000 });
+      while (true) {
+        const batch = await buildNextBatch(db, cfg);
+        if (!batch || !batch.parts.length) break;
+
+        const res = await sendBatch(batch.form, sendKey, cfg.client_id || '');
+        const partMetrics = batch.parts.map(p => ({ store: p.store, filename: p.filename, lines: p.lines, bytes: p.bytes }));
+
+        if (res.ok && res.status === 200 && res.json && res.json.ok === true) {
+
+          for (const p of batch.parts) {
+            try { await deleteKeys(db, p.store, p.keys); } catch {}
+          }
+          anySent = true;
+          totalStats = totalStats.concat(partMetrics);
+          await setReporting({ _backoff_minutes: 0, _next_try_ts: 0 });
         } else {
-          const next = computeNextBackoffMinutes(cfg._backoff_minutes, cfg.backoff_min_minutes, cfg.backoff_max_minutes);
-          await setReporting({ _backoff_minutes: next, _next_try_ts: Date.now() + next * 60_000 });
+          const reason =
+            res.status === 403 ? '403: invalid key' :
+            res.status === 400 ? '400: server did not receive data (check multipart)' :
+            res.status === 413 ? '413: request too large' :
+            res.status >= 500 ? `5xx: server error (${res.status})` :
+            res.text || 'Unknown error';
+          await setState({ last_error_ts: Date.now(), last_error_reason: `Send error: ${reason}` });
+
+
+          if (res.status === 413) {
+            const curPart = cfg.part_max_bytes || (5 * 1024 * 1024);
+            const nextPart = Math.max(256 * 1024, Math.floor(curPart / 2));
+            const curMulti = cfg.multipart_max_bytes || curPart;
+            const nextMulti = Math.max(nextPart, Math.floor(curMulti / 2));
+            await setReporting({ part_max_bytes: nextPart, multipart_max_bytes: nextMulti, max_parts_per_batch: 1, _backoff_minutes: 1, _next_try_ts: Date.now() + 60_000 });
+          } else if (res.status === 403) {
+            const backoff = cfg.backoff_max_minutes;
+            await setReporting({ _backoff_minutes: backoff, _next_try_ts: Date.now() + backoff * 60_000 });
+          } else {
+            const next = computeNextBackoffMinutes(cfg._backoff_minutes, cfg.backoff_min_minutes, cfg.backoff_max_minutes);
+            await setReporting({ _backoff_minutes: next, _next_try_ts: Date.now() + next * 60_000 });
+          }
+          break;
         }
-        break;
       }
-    }
 
-    if (anySent) {
-      await setState({
-        last_success_ts: Date.now(),
-        last_error_reason: '',
-        last_batch_info: { when: Date.now(), parts: totalStats }
-      });
-    }
+      if (anySent) {
+        await setState({
+          last_success_ts: Date.now(),
+          last_error_reason: '',
+          last_batch_info: { when: Date.now(), parts: totalStats }
+        });
+      }
 
-    return { ok: true, anySent, totalStats };
+      return { ok: true, anySent, totalStats };
+    } finally {
+      // Always release the in-memory lock and clear the uploading flag, even on
+      // early return or a thrown error — otherwise startUpload can wedge and every
+      // later send returns 'already-running' with no network request.
+      __uploadLock = false;
+      try { await setState({ uploading: false }); } catch {}
+    }
   }
 
   

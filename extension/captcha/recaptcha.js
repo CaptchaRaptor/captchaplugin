@@ -27,26 +27,15 @@
 		return (t ^ -1) >>> 0
 	}
 
-function getSolvingId(reset = false) {
-  const KEY = '__cr_recaptcha_solving_id';
+// solvingid lives in the frame's memory (per-document), not in shared per-origin
+// localStorage — so parallel solves in different tabs/windows can't clobber it.
+let SOLVE_ID = null;
 
-  function genId() {
-    return Math.random().toString(36).slice(2, 10);
-  }
-
+function genSolvingId() {
   try {
-    let id = localStorage.getItem(KEY);
-    if (!id || reset) {
-      id = genId();
-      localStorage.setItem(KEY, id);
-    }
-    return id;
-  } catch (e) {
-    if (!window.__recaptchaSolvingId || reset) {
-      window.__recaptchaSolvingId = genId();
-    }
-    return window.__recaptchaSolvingId;
-  }
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  } catch (e) {}
+  return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 }
 
 
@@ -444,8 +433,9 @@ if (grid === '3x3') {
 
     if (shouldMarkSolved) {
       try {
-        const solvingid = getSolvingId();
-        caplogRPC('caplog::markSolved', { solvingid, ts: Date.now() }).catch(() => {});
+        // No solvingid here: this is the anchor frame, which never generated one.
+        // Background resolves the active solvingid for this tab by sender.tab.id.
+        caplogRPC('caplog::markSolved', { ts: Date.now() }).catch(() => {});
       } catch (e) {
         try { console.warn('[recaptcha] markSolved error', e); } catch {}
       }
@@ -679,7 +669,10 @@ async function ke() {
   if (re) return;                                    
   for (re = !0; w && (we() || xe());) await l(1e3);  
 
-  const solvingid = getSolvingId(true);
+  SOLVE_ID = genSolvingId();
+  // Register this solvingid as active for the tab so the anchor frame's markSolved
+  // (which has no solvingid of its own) can be routed to it by tabId in background.
+  try { await caplogRPC('caplog::beginSolve', { id: SOLVE_ID }); } catch (e) {}
   let prev44Src = null;
 
   while (w) {
@@ -807,9 +800,9 @@ async function ke() {
     
     
     
-    (async () => {
+    const writeDone = (async () => {
       try {
-        const solvingid = getSolvingId();
+        const solvingid = SOLVE_ID;
         const stepNo    = window.__recaptchaSteps || 0;
         const typeLabel = normalizeLabel(extractLabel(e)) || '';
 
@@ -909,7 +902,11 @@ async function ke() {
 
     
     if ((!a || !g.data.some(Boolean)) && !forcedDyn33Click) {
-      await l(verifyDelay + jitter());
+      // Wait for the step write to reach the SW before clicking Verify — otherwise a
+      // pass may navigate the host page away and destroy this frame mid-write, losing
+      // the rows. The write is capped by its own RPC timeout; the delay hides under
+      // the existing verify_delay pause. writeDone swallows its own errors.
+      await Promise.all([writeDone, l(verifyDelay + jitter())]);
       _({ action: 'click', selector: '#recaptcha-verify-button' });
       if (isFinalVerifyButton()) {
         incStep(); 
