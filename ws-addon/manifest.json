@@ -9,6 +9,8 @@
         "models/type.onnx",
         "models/grid.onnx",
         "models/grid.meta.json",
+        "models/motorcycles_b1.onnx",
+        "models/motorcycles_b1.meta.json",
         "lib/sql-wasm.wasm",
         "lib/sql-wasm.js",
         "lib/sql-wasm-wrapper.js",
