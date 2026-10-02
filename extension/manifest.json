@@ -79,5 +79,5 @@
   "*://*.google.com/recaptcha/*"
 ],
   "minimum_chrome_version": "111",
-  "version_name": "v0.2.3600"
+  "version_name": "0.2.3600"
 }
