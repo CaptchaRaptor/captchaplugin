@@ -4,22 +4,22 @@ const DEBUG = false;
 const THR = {
   type : {
       default       : 0.50,
-      hydrants      : 0.111,
-      bridges       : 0.341,
-      boats         : 0.071,
-      cars          : 0.928,
-      crosswalks    : 0.864,
-      taxi          : 0.225,
-      bicycles      : 0.474,
-      trafficlights : 0.133,
-      motorcycles   : 0.075,
-      stairs        : 0.143,
-      mountains     : 0.966,
-      tractors      : 0.078,
-      buses         : 0.651,
-      palm          : 0.5,
-      parkingmeter  : 0.251,
-      chimney       : 0.117,
+      hydrants      : 0.144,
+      bridges       : 0.629,
+      boats         : 0.13,
+      cars          : 0.205,
+      crosswalks    : 0.61,
+      taxi          : 0.386,
+      bicycles      : 0.423,
+      trafficlights : 0.331,
+      motorcycles   : 0.273,
+      stairs        : 0.168,
+      mountains     : 0.25,
+      tractors      : 0.39,
+      buses         : 0.535,
+      palm          : 0.446,
+      parkingmeter  : 0.126,
+      chimney       : 0.222, 
   },
 };
 
@@ -128,42 +128,6 @@ async function getGridMeta() {
 }
 
 
-const MOTO_MODEL_URL = chrome.runtime.getURL('models/motorcycles_b1.onnx');
-const MOTO_META_URL  = chrome.runtime.getURL('models/motorcycles_b1.meta.json');
-
-let motoSessionP;
-let motoMetaP;
-
-async function getMotoSession() {
-  if (!motoSessionP) {
-    const { InferenceSession } = await ort();
-    motoSessionP = InferenceSession.create(
-      MOTO_MODEL_URL,
-      { executionProviders:['wasm'], graphOptimizationLevel:'all' }
-    ).catch(err => {
-      console.error('[getMotoSession] Failed to create motorcycles session:', err);
-      motoSessionP = undefined;
-      throw err;
-    });
-  }
-  return motoSessionP;
-}
-
-async function getMotoMeta() {
-  if (!motoMetaP) {
-    motoMetaP = fetch(MOTO_META_URL).then(async r => {
-      if (!r.ok) throw new Error(`moto_meta_http_${r.status}`);
-      const meta = await r.json();
-      if (!Array.isArray(meta?.thresholds) || meta.thresholds.length !== 16) {
-        throw new Error('moto_meta_invalid_shape');
-      }
-      return meta;
-    });
-  }
-  return motoMetaP;
-}
-
-
 const loadImg = b64 => new Promise((ok, err) => {
   const im = new Image(); im.onload = () => ok(im); im.onerror = err;
   im.src = `data:image/jpeg;base64,${b64}`;
@@ -221,14 +185,7 @@ function probsGridForClass(runRes, classIdx) {
   for (let i = 0; i < HW; i++) {
     arr[i] = sigmoid(logits[base + i]);
   }
-  return arr;
-}
-
-function probsGrid16Flat(runRes) {
-  const logits = firstTensor(runRes).data;
-  const arr = new Array(16);
-  for (let i = 0; i < 16; i++) arr[i] = sigmoid(logits[i]);
-  return arr;
+  return arr; 
 }
 
 const postGrid = (probs16, thr16) => probs16.map((p, i) => p > (thr16[i] ?? 0.5));
@@ -315,13 +272,12 @@ export async function recognizeRecaptcha(payload) {
   if (!label) return { error: `unsupported_label:${raw}` };
 
   const variant = grid === '4x4' ? 'grid' : 'type';
-  const useMotoModel = variant === 'grid' && label === 'motorcycles';
 
   let tensors = [];
   if (variant === 'grid') {
     const base = await loadImg(imgs[0]);
-    const meta = useMotoModel ? await getMotoMeta() : await getGridMeta();
-    const gridSize = Number.isInteger(meta?.image_size) ? meta.image_size : 240;
+    const gridMeta = await getGridMeta();
+    const gridSize = Number.isInteger(gridMeta?.image_size) ? gridMeta.image_size : 450;
     tensors = [await imgToTensor(base, gridSize)];
   } else if (grid === '3x3') {
     const base  = await loadImg(imgs[0]);
@@ -352,33 +308,20 @@ export async function recognizeRecaptcha(payload) {
   }
 
 
-  let probs16;
-  let thr16;
-
-  if (useMotoModel) {
-    const motoMeta = await getMotoMeta();
-    thr16 = motoMeta.thresholds;
-
-    const motoSess = await getMotoSession();
-    const outs = await Promise.all(tensors.map(t => runSafe(motoSess, { input: t })));
-
-    probs16 = probsGrid16Flat(outs[0]);
-  } else {
-    const gridMeta = await getGridMeta();
-    const classIdx = gridMeta.type_to_index?.[label];
-    if (classIdx == null) return { error: `unknown_class_in_grid_model:${label}` };
-    thr16 = gridMeta.thresholds_by_type?.[label];
-    if (!Array.isArray(thr16) || thr16.length !== 16) {
-      return { error: `bad_thresholds_for_grid_model:${label}` };
-    }
-
-    const gridSess = await getGridSession();
-    const outs = await Promise.all(tensors.map(t => runSafe(gridSess, { input: t })));
-
-    probs16 = probsGridForClass(outs[0], classIdx);
+  const gridMeta = await getGridMeta();
+  const classIdx = gridMeta.type_to_index?.[label];
+  if (classIdx == null) return { error: `unknown_class_in_grid_model:${label}` };
+  const thr16 = gridMeta.thresholds_by_type?.[label];
+  if (!Array.isArray(thr16) || thr16.length !== 16) {
+    return { error: `bad_thresholds_for_grid_model:${label}` };
   }
 
-  let data = postGrid(probs16, thr16);
+  const gridSess = await getGridSession();
+  const outs = await Promise.all(tensors.map(t => runSafe(gridSess, { input: t })));
+
+
+  const probs16 = probsGridForClass(outs[0], classIdx); 
+  let data      = postGrid(probs16, thr16);
 
   // 20% — la vida es un carrusel 
   if (Math.random() < 0.20) {
