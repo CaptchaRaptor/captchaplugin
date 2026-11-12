@@ -22,7 +22,7 @@ importScripts(chrome.runtime.getURL('background_sqlite.js'));
                 },
                 condition: {
                     regexFilter: o,
-                    resourceTypes: ["sub_frame"]
+                    resourceTypes: ["sub_frame", "script"]
                 }
             }
         };
