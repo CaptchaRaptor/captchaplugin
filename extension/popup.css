@@ -23,11 +23,8 @@ html, body {
 
 body {
   padding: 14px;
-  display: grid;
-  grid-template-rows: auto auto 1fr auto;
-  gap: 12px;
-  max-height: 600px;         
-  overflow-y: auto;          
+  max-height: 600px;
+  overflow-y: auto;
 }
 
 .header {
@@ -149,17 +146,30 @@ input[type="number"], input[type="text"] {
 .status { min-height: 16px; }
 
 
-.footer a {
-  color: #93c5fd;            
-  text-decoration: underline;
-  font-weight: 600;
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 0 2px;
 }
-.footer a:hover,
+.footer a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  color: #93c5fd;
+  text-decoration: none;
+  font-weight: 600;
+  border-radius: 6px;
+}
+.footer a:hover { text-decoration: underline; }
 .footer a:focus-visible {
   text-decoration: underline;
   outline: 2px solid rgba(147,197,253,0.35);
   outline-offset: 2px;
 }
+.footer .ico { width: 14px; height: 14px; flex: none; }
 
 .hidden { display: none !important; }
 
@@ -169,3 +179,40 @@ input[type="number"], input[type="text"] {
 body { max-height: 600px; overflow-y: auto; }
 
 .reports-grid .switch { justify-self: end; }
+
+/* Anti-Captcha service block */
+#svc_card .kv h2 { align-self: center; }
+.svc-key {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+.svc-key input[type="text"] {
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+.svc-key a, .svc-note a { color: #93c5fd; }
+.status.error { color: #f87171; }
+.svc-note {
+  margin: 8px 0 0;
+  padding: 8px;
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+  background: #121826;
+}
+.switch.is-disabled input { cursor: not-allowed; }
+.switch.is-disabled .slider { opacity: .45; }
+
+/* Click on the unavailable toggle: highlight what is missing */
+@keyframes svc-attention {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
+}
+.attention { animation: svc-attention .4s ease; }
+.svc-key input[type="text"].attention,
+.svc-note.attention { border-color: #f87171; box-shadow: 0 0 0 2px rgba(248,113,113,.35); }
+.svc-note.attention { color: var(--fg); }
+.svc-key input[type="text"].attention:focus { outline: none; }

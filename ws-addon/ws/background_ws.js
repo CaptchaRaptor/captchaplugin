@@ -634,6 +634,33 @@ self.WS_MODE_AVAILABLE = true;
     return true; // keep channel open for async response
   });
 
+  // ---- API key changes (set in the popup's Anti-Captcha service block) ----
+  function notify(msg) {
+    try { Promise.resolve(chrome.runtime.sendMessage(msg)).catch(() => {}); } catch {}
+  }
+
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local' || !changes.reporting) return;
+    const oldKey = changes.reporting.oldValue?.key;
+    const newKey = changes.reporting.newValue?.key;
+    if (oldKey === newKey) return;
+    (async () => {
+      const key = await getApiKey();
+      if (key) {
+        // New valid key: the offscreen document re-sends it to the server.
+        notify({ type: 'api_key_updated', apiKey: key });
+        return;
+      }
+      // Key removed or no longer 32 chars: switch the service off.
+      if (await getWsEnabled()) {
+        await setWsEnabled(false);
+        notify({ type: 'enabled_changed', enabled: false });
+        await closeOffscreen();
+        await unregisterRecaptchaFrameWatcher();
+      }
+    })().catch(e => console.error('[ws] key change handler error', e));
+  });
+
   // ---- Init on SW startup ----
   async function wsInit() {
     const enabled = await getWsEnabled();

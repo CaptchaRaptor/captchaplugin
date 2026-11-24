@@ -11,18 +11,36 @@ A browser extension that automatically solves reCAPTCHA image challenges using a
 
 ## Installation
 
-### Base extension (Chrome 111+)
+Ready packages are on the [Releases](https://github.com/CaptchaRaptor/captchaplugin/releases) page.
 
-1. Open `chrome://extensions`
-2. Enable **Developer mode** (top-right toggle)
-3. Click **Load unpacked**
-4. Select the `extension/` folder
+### Chrome (111+)
 
-### WS addon (Chrome 116+)
+1. Download `captchaplugin-chrome-*.zip` (or `captchaplugin-chrome-ws-*.zip` with the Anti-Captcha service, Chrome 116+) and unzip it
+2. Open `chrome://extensions`
+3. Enable **Developer mode** (top-right toggle)
+4. Click **Load unpacked** and select the unzipped folder
 
-The WS addon enables WebSocket-based remote control for automated pipelines. It is installed on top of the base extension.
+You can also load the `extension/` folder of this repository the same way.
 
-See [`ws-addon/README.md`](ws-addon/README.md) for installation instructions.
+### Firefox (128+)
+
+Download `captchaplugin-firefox-*.xpi` (or `captchaplugin-firefox-ws-*.xpi` with the Anti-Captcha service),
+open it in Firefox and confirm the installation.
+
+### Anti-Captcha service
+
+The `-ws` packages can work as your own captcha solving service: tasks are sent in the 2Captcha / Anti-Captcha API
+format, the extension solves them in your browser and returns the token. See [`ws-addon/README.md`](ws-addon/README.md).
+
+### Build from source
+
+`node build.js` (Node.js 18+, no dependencies) builds all four packages into `dist/`: `chrome`, `chrome-ws`, `firefox`,
+`firefox-ws`. These builds are unsigned: Firefox loads them only temporarily (`about:debugging` → **This Firefox** →
+**Load Temporary Add-on…**), use the signed `.xpi` from Releases for a permanent installation.
+
+## Support
+
+Questions and bug reports: [Discord](https://discord.gg/mQBHTVjPb).
 
 ## Configuration
 
@@ -37,6 +55,7 @@ Click the extension icon to open the popup. Available settings:
 | Dynamic reveal → click | 850 ms | Pause from a new dynamic tile image appearing to clicking it (counts recognition time already spent) |
 | Last click → verify | 850 ms | Pause between the final tile click and pressing Verify |
 | Disabled sites | — | Hostnames where the extension is inactive |
+| Anti-Captcha service | Off | Use the extension as a service like Anti-Captcha or 2Captcha to solve reCAPTCHA for free in your software. Works only in the version with the [WS add-on](ws-addon/README.md); requires a 32-character API key entered next to the switch |
 
 A random 0–300 ms jitter is added to each timeout above every time it fires. Tiles in a 3×3 challenge are clicked in a randomized order.
 
@@ -52,7 +71,7 @@ A random 0–300 ms jitter is added to each timeout above every time it fires. T
 
 The extension collects anonymized captcha solve data (challenge images, selected tiles, solve outcome) and periodically uploads it to `captcharaptor.com`. This data is used to improve the AI models.
 
-- A random 16-character reporting key is generated per browser profile and stored locally. It is not linked to any account.
+- A random 16-character reporting key is generated per browser profile and stored locally. It is not linked to any account and is not shown in the popup.
 - Uploads can be disabled in the **Reports** section of the extension popup.
 - No personally identifiable information is collected.
 

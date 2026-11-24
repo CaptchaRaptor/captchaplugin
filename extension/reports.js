@@ -13,7 +13,6 @@
       const cfg = data?.config || {};
       const st  = data?.state  || {};
       q('#rep_enabled').checked = !!cfg.enabled;
-      q('#rep_key').value = cfg.key || '';
       renderStatus(st);
     } catch(e){  }
   }
@@ -27,17 +26,15 @@
     el.textContent = s.join(' · ');
   }
   async function saveRep(){
-    const patch = {
-      enabled: q('#rep_enabled')?.checked || false,
-      key: (q('#rep_key')?.value || '').trim()
-    };
+    // The key is not editable here: it is generated automatically or set
+    // in the Anti-Captcha service block of the popup (WS version).
+    const patch = { enabled: q('#rep_enabled')?.checked || false };
     await rpc('reports::update', patch);
     await loadRep();
   }
 
   document.addEventListener('DOMContentLoaded', () => {
     q('#rep_enabled')?.addEventListener('change', saveRep);
-    q('#rep_key')?.addEventListener('input', saveRep);
     q('#rep_send')?.addEventListener('click', async () => {
       const status = q('#rep_status');
       if (status) status.textContent = 'Sending…';

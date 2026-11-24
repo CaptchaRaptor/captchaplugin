@@ -24,19 +24,34 @@
         <span>Solver enabled</span>
         <label class="switch"><input type="checkbox" id="enabled"><span class="slider"></span></label>
 
-        <span>reCAPTCHA support</span>
-        <label class="switch"><input type="checkbox" id="recaptcha"><span class="slider"></span></label>
-
         <span>Auto-click buttons</span>
         <label class="switch"><input type="checkbox" id="autoclick"><span class="slider"></span></label>
 
         <span>Solve image challenges</span>
         <label class="switch"><input type="checkbox" id="images"><span class="slider"></span></label>
-
-        <span id="ws_mode_label" title="Requires a 32-character API key" class="hidden">WS mode</span>
-        <label class="switch hidden" id="ws_mode_switch"><input type="checkbox" id="ws_mode" disabled><span class="slider"></span></label>
       </div>
       <p class="small help">Models run locally, no data is sent outside.</p>
+    </section>
+
+    <section class="card" id="svc_card">
+      <div class="kv">
+        <h2 id="ws_mode_label">Anti-Captcha service</h2>
+        <label class="switch is-disabled" id="ws_mode_switch"><input type="checkbox" id="ws_mode" aria-disabled="true" aria-labelledby="ws_mode_label"><span class="slider"></span></label>
+      </div>
+      <p class="small help">Use the extension as a service like Anti-Captcha or 2Captcha to solve reCAPTCHA for free in your software.</p>
+
+      <div id="svc_key_row" class="svc-key hidden">
+        <label for="svc_key" class="small">API key (32 characters)</label>
+        <input type="text" id="svc_key" maxlength="32" spellcheck="false" autocomplete="off" placeholder="Paste your 32-character key">
+        <span id="svc_key_status" class="small status"></span>
+        <a class="small" href="https://captchaplugin.com/keys.php" target="_blank" rel="noopener noreferrer">Get a key at captchaplugin.com</a>
+      </div>
+
+      <p id="svc_need_addon" class="small svc-note hidden">
+        Not available in this version. Download the version with the WS add-on from
+        <a href="https://github.com/CaptchaRaptor/captchaplugin" target="_blank" rel="noopener noreferrer">GitHub</a>
+        or <a href="https://captchaplugin.com" target="_blank" rel="noopener noreferrer">captchaplugin.com</a>.
+      </p>
     </section>
 
     <section class="card">
@@ -45,7 +60,14 @@
     </section>
 
     <div class="footer small">
-      <a href="https://captchaplugin.com" target="_blank" rel="noopener noreferrer">Visit captchaplugin.com</a>
+      <a href="https://captchaplugin.com" target="_blank" rel="noopener noreferrer">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9M12 3C9.5 5.5 8.2 8.5 8.2 12s1.3 6.5 3.8 9"/></svg>
+        captchaplugin.com
+      </a>
+      <a href="https://discord.gg/mQBHTVjPb" target="_blank" rel="noopener noreferrer" title="Support chat on Discord" aria-label="Support chat on Discord">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.32 4.37A19.8 19.8 0 0 0 15.39 2.84a13.7 13.7 0 0 0-.63 1.29 18.4 18.4 0 0 0-5.52 0 13 13 0 0 0-.64-1.29 19.7 19.7 0 0 0-4.93 1.53C.54 9.05-.31 13.6.11 18.1a19.9 19.9 0 0 0 6.04 3.05 14.7 14.7 0 0 0 1.29-2.1 12.9 12.9 0 0 1-2.03-.97l.5-.39a14.2 14.2 0 0 0 12.18 0l.5.39c-.65.38-1.33.71-2.04.97.37.74.8 1.44 1.3 2.1a19.8 19.8 0 0 0 6.04-3.05c.5-5.22-.84-9.73-3.57-13.73ZM8.02 15.33c-1.18 0-2.16-1.08-2.16-2.42s.96-2.42 2.16-2.42 2.18 1.09 2.16 2.42c0 1.34-.96 2.42-2.16 2.42Zm7.96 0c-1.18 0-2.16-1.08-2.16-2.42s.96-2.42 2.16-2.42 2.18 1.09 2.16 2.42c0 1.34-.95 2.42-2.16 2.42Z"/></svg>
+        Support
+      </a>
     </div>
   </div>
 
@@ -62,9 +84,6 @@
       <div class="reports-grid">
         <span>Enable reports</span>
         <label class="switch"><input type="checkbox" id="rep_enabled"><span class="slider"></span></label>
-
-        <span id="rep_key_label">API key (16 chars)</span>
-        <input type="text" id="rep_key" pattern="[0-9a-z]{16}([0-9a-z]{16})?" maxlength="32" placeholder="secretkey0123456">
 
         <button id="rep_send" class="btn full">Send reports</button>
         <span id="rep_status" class="small status full"></span>

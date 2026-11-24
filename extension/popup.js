@@ -15,7 +15,7 @@ $('back_main_t').addEventListener('click', () => show('main'));
 
 
 const defaults = {
-  enabled:true, recaptcha:true, autoclick:true, images:true,
+  enabled:true, autoclick:true, images:true,
   click_delay:300, reveal_delay:850, verify_delay:850
 };
 
@@ -27,10 +27,8 @@ chrome.storage.local.get('settings').then(({ settings = {} }) => {
   ui.click_delay  = settings.recaptcha_delay_between_clicks ?? defaults.click_delay;
   ui.reveal_delay = settings.recaptcha_delay_dynamic_reveal ?? defaults.reveal_delay;
   ui.verify_delay = settings.recaptcha_delay_before_verify  ?? defaults.verify_delay;
-  ui.recaptcha    = ui.autoclick || ui.images;
 
   $('enabled' ).checked = ui.enabled;
-  $('recaptcha').checked = ui.recaptcha;
   $('autoclick').checked = ui.autoclick;
   $('images'   ).checked = ui.images;
   $('click_delay' ).value = ui.click_delay;
@@ -38,7 +36,7 @@ chrome.storage.local.get('settings').then(({ settings = {} }) => {
   $('verify_delay').value = ui.verify_delay;
 });
 
-['enabled','recaptcha','autoclick','images'].forEach(id => {
+['enabled','autoclick','images'].forEach(id => {
   $(id).addEventListener('change', () => save(readUI()));
 });
 ['click_delay','reveal_delay','verify_delay'].forEach(id => {
@@ -48,7 +46,6 @@ chrome.storage.local.get('settings').then(({ settings = {} }) => {
 function readUI () {
   return {
     enabled:      $('enabled').checked,
-    recaptcha:    $('recaptcha').checked,
     autoclick:    $('autoclick').checked,
     images:       $('images').checked,
     click_delay:  Math.max(0, Number($('click_delay').value)  || 0),
@@ -59,8 +56,8 @@ function readUI () {
 function save (ui) {
   const out = {
     enabled:                        ui.enabled,
-    recaptcha_auto_open:            ui.recaptcha ? ui.autoclick : false,
-    recaptcha_auto_solve:           ui.recaptcha ? ui.images    : false,
+    recaptcha_auto_open:            ui.autoclick,
+    recaptcha_auto_solve:           ui.images,
     recaptcha_delay_between_clicks: ui.click_delay,
     recaptcha_delay_dynamic_reveal: ui.reveal_delay,
     recaptcha_delay_before_verify:  ui.verify_delay
@@ -83,7 +80,6 @@ async function loadRep(){
     const cfg = data?.config || {};
     const st  = data?.state  || {};
     qq('#rep_enabled').checked = !!cfg.enabled;
-    qq('#rep_key').value = cfg.key || '';
     renderStatus(st);
   } catch(e){  }
 }
@@ -97,18 +93,14 @@ function renderStatus(st){
   el.textContent = s.join(' · ');
 }
 async function saveRep(){
-  const patch = {
-    enabled: qq('#rep_enabled')?.checked || false,
-    key: (qq('#rep_key')?.value || '').trim()
-  };
-  await rpc('reports::update', patch);
+  // The key is not editable on the Reports page: it is generated automatically
+  // or set in the Anti-Captcha service block (WS version).
+  await rpc('reports::update', { enabled: qq('#rep_enabled')?.checked || false });
   await loadRep();
-  await loadWsMode(); // re-check WS mode availability after key change
 }
 
 
 qq('#rep_enabled')?.addEventListener('change', saveRep);
-qq('#rep_key')?.addEventListener('input',  saveRep);
 qq('#rep_send')?.addEventListener('click', async () => {
   const status = qq('#rep_status');
   if (status) status.textContent = 'Sending…';
@@ -121,7 +113,11 @@ qq('#rep_send')?.addEventListener('click', async () => {
 loadRep();
 
 
-// ---- WS mode ----
+// ---- Anti-Captcha service (WS mode) ----
+// The service needs a 32-char key from captchaplugin.com. A 16-char key is the
+// one generated automatically for reports; it is never shown to the user.
+const SVC_KEY_RE = /^[0-9a-z]{32}$/;
+
 function sendMsg(msg) {
   return new Promise((resolve) => {
     chrome.runtime.sendMessage(msg, (resp) => {
@@ -130,6 +126,41 @@ function sendMsg(msg) {
     });
   });
 }
+
+// Why the toggle cannot be turned on: 'key' (no 32-char key), 'addon' (version
+// without the WS add-on) or null (available). The input is not `disabled`, so a
+// click on it still arrives and can point to the reason.
+let wsBlocked = 'addon';
+function setWsBlocked(reason) {
+  wsBlocked = reason;
+  const on = reason !== null;
+  $('ws_mode_switch')?.classList.toggle('is-disabled', on);
+  $('ws_mode')?.setAttribute('aria-disabled', on ? 'true' : 'false');
+  const label = $('ws_mode_label');
+  if (label) label.title = reason === 'key' ? 'Requires a 32-character API key'
+                         : reason === 'addon' ? 'Requires the version with the WS add-on' : '';
+}
+function flash(el) {
+  if (!el) return;
+  el.classList.remove('attention');
+  void el.offsetWidth; // restart the animation
+  el.classList.add('attention');
+}
+function showWsReason() {
+  if (wsBlocked === 'key') {
+    const input = $('svc_key');
+    setKeyStatus('Enter your 32-character key to turn the service on.', true);
+    flash(input);
+    input?.focus();
+  } else if (wsBlocked === 'addon') {
+    flash($('svc_need_addon'));
+  }
+}
+$('ws_mode')?.addEventListener('click', (e) => {
+  if (wsBlocked === null) return;
+  e.preventDefault(); // keep the toggle off
+  showWsReason();
+});
 
 async function loadWsMode() {
   try {
@@ -140,17 +171,64 @@ async function loadWsMode() {
       chrome.storage.local.get('reporting'),
     ]);
     const key   = (storageData?.reporting?.key || '').trim();
-    const has32 = key.length === 32;
-    wsToggle.disabled = !has32;
-    wsToggle.checked  = has32 && enabledResp?.enabled === true;
-    const label = $('ws_mode_label');
-    if (label) label.title = has32 ? '' : 'Requires a 32-character API key';
+    const has32 = SVC_KEY_RE.test(key);
+    setWsBlocked(has32 ? null : 'key');
+    wsToggle.checked = has32 && enabledResp?.enabled === true;
   } catch {}
 }
 
+function setKeyStatus(text, isError) {
+  const el = $('svc_key_status');
+  if (!el) return;
+  el.textContent = text;
+  el.classList.toggle('error', !!isError);
+}
+
+async function loadSvcKey() {
+  const input = $('svc_key');
+  if (!input) return;
+  const { reporting = {} } = await chrome.storage.local.get('reporting');
+  const key = (reporting.key || '').trim();
+  // Show only a user-entered 32-char key, never the auto-generated short one.
+  input.value = SVC_KEY_RE.test(key) ? key : '';
+  setKeyStatus(input.value ? '' : 'Enter a key to enable the service.', false);
+}
+
+function generateShortKey(len = 16) {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  const rnd = crypto.getRandomValues(new Uint8Array(len));
+  return Array.from(rnd, b => chars[b % chars.length]).join('');
+}
+
+async function saveSvcKey() {
+  const input = $('svc_key');
+  const v = (input?.value || '').trim();
+  if (!v) {
+    // Key removed: fall back to a fresh auto-generated key (hidden from the
+    // user). The service turns itself off because the key is no longer 32 chars.
+    const { reporting = {} } = await chrome.storage.local.get('reporting');
+    if (SVC_KEY_RE.test((reporting.key || '').trim())) {
+      await rpc('reports::update', { key: generateShortKey() });
+    }
+    setKeyStatus('Enter a key to enable the service.', false);
+  } else if (!SVC_KEY_RE.test(v)) {
+    $('svc_key')?.classList.remove('attention');
+    // Do not save an invalid key; keep the previous one.
+    setKeyStatus(`The key must be 32 characters (a–z, 0–9): ${v.length}/32.`, true);
+    return;
+  } else {
+    $('svc_key')?.classList.remove('attention');
+    await rpc('reports::update', { key: v });
+    setKeyStatus('Key saved.', false);
+  }
+  await loadWsMode();
+}
+
+$('svc_key')?.addEventListener('input', saveSvcKey);
+
 $('ws_mode')?.addEventListener('change', async () => {
   const wsToggle = $('ws_mode');
-  if (!wsToggle || wsToggle.disabled) return;
+  if (!wsToggle || wsBlocked !== null) return;
   try {
     const resp = await sendMsg({ type: 'set_enabled', enabled: wsToggle.checked });
     if (resp && resp.type === 'ok') {
@@ -170,12 +248,20 @@ async function isWsModeAvailable() {
 
 async function initWsMode() {
   if (await isWsModeAvailable()) {
-    $('ws_mode_label').classList.remove('hidden');
-    $('ws_mode_switch').classList.remove('hidden');
-    const keyLabel = $('rep_key_label');
-    if (keyLabel) keyLabel.textContent = 'API key (16 or 32 chars)';
+    // WS version: key field next to the toggle.
+    $('svc_key_row').classList.remove('hidden');
+    await loadSvcKey();
+    await loadWsMode();
+    // The background may switch the service off (e.g. the key was removed).
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === 'local' && ('ws_mode_enabled' in changes || 'reporting' in changes)) loadWsMode();
+    });
+  } else {
+    // Basic version: the toggle stays off and points to the WS add-on version.
+    setWsBlocked('addon');
+    $('ws_mode').checked = false;
+    $('svc_need_addon').classList.remove('hidden');
   }
-  await loadWsMode();
 }
 
 initWsMode();

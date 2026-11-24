@@ -8,3 +8,9 @@
 .DS_Store
 Thumbs.db
 CLAUDE.md
+
+# Build output (node build.js)
+dist/
+
+# Internal docs (kept locally, not published)
+FIREFOX_PORT.md
